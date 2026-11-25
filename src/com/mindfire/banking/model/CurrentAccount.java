@@ -1,8 +1,14 @@
-package banking.model;
+package com.mindfire.banking.model;
 
+import com.mindfire.banking.enums.AccountType;
+
+import java.io.Serial;
 import java.math.BigDecimal;
 
 public class CurrentAccount extends Account {
+    @Serial
+    private static final long serialVersionUID = 1L;
+    public static final BigDecimal MINIMUM_BALANCE = BigDecimal.ZERO;
 
     public CurrentAccount(String accountNumber, Customer customer) {
         super(accountNumber, customer);
@@ -15,6 +21,6 @@ public class CurrentAccount extends Account {
 
     @Override
     public BigDecimal getMinimumBalance() {
-        return BigDecimal.ZERO;
+        return MINIMUM_BALANCE;
     }
 }

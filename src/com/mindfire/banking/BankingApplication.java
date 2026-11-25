@@ -1,22 +1,37 @@
-package banking;
+package com.mindfire.banking;
 
-import banking.exception.BankException;
-import banking.model.Account;
-import banking.model.AccountType;
-import banking.model.Customer;
-import banking.model.Transaction;
-import banking.service.BankService;
-import banking.service.BankServiceImpl;
+import com.mindfire.banking.enums.AccountType;
+import com.mindfire.banking.exception.BankException;
+import com.mindfire.banking.model.Account;
+import com.mindfire.banking.model.Customer;
+import com.mindfire.banking.model.Transaction;
+import com.mindfire.banking.service.BankService;
+import com.mindfire.banking.service.impl.BankServiceImpl;
+import com.mindfire.banking.storage.BankData;
+import com.mindfire.banking.storage.FileStorage;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Scanner;
 
-public class Main {
-    private static final Scanner scanner = new Scanner(System.in);
-    private static final BankService bankService = new BankServiceImpl();
+public class BankingApplication {
+    private static final String DATA_FILE = "bank-data.ser";
+
+    private final Scanner scanner = new Scanner(System.in);
+    private final FileStorage<BankData> fileStorage = new FileStorage<>(DATA_FILE);
+    private final BankData bankData;
+    private final BankService bankService;
+
+    public BankingApplication() {
+        this.bankData = fileStorage.load(BankData::new);
+        this.bankService = new BankServiceImpl(bankData);
+    }
 
     public static void main(String[] args) {
+        new BankingApplication().start();
+    }
+
+    private void start() {
         boolean running = true;
 
         while (running) {
@@ -34,7 +49,8 @@ public class Main {
                     case 7 -> viewTransactionHistory();
                     case 8 -> viewAllCustomers();
                     case 9 -> {
-                        System.out.println("Thank you for using Smart Banking System!");
+                        fileStorage.save(bankData);
+                        System.out.println("Data saved. Thank you for using Smart Banking System!");
                         running = false;
                     }
                     default -> System.out.println("Invalid choice. Please enter 1 to 9.");
@@ -47,7 +63,7 @@ public class Main {
         }
     }
 
-    private static void showMenu() {
+    private void showMenu() {
         System.out.println("========== SMART BANKING SYSTEM ==========");
         System.out.println("1. Create Customer");
         System.out.println("2. Create Account");
@@ -60,7 +76,7 @@ public class Main {
         System.out.println("9. Exit");
     }
 
-    private static void createCustomer() {
+    private void createCustomer() {
         String name = readText("Enter Name: ");
         String email = readText("Enter Email: ");
         String phone = readText("Enter Phone: ");
@@ -70,19 +86,20 @@ public class Main {
         System.out.println("Customer ID: " + customer.getCustomerId());
     }
 
-    private static void createAccount() {
+    private void createAccount() {
         String customerId = readText("Enter Customer ID: ");
         AccountType accountType = readAccountType();
+        BigDecimal initialDeposit = readAmount("Enter Initial Deposit: ");
 
-        Account account = bankService.createAccount(customerId, accountType);
+        Account account = bankService.createAccount(customerId, accountType, initialDeposit);
         System.out.println("Account Created Successfully!");
         System.out.println("Account Number: " + account.getAccountNumber());
         System.out.println("Account Holder: " + account.getCustomer().getName());
         System.out.println("Account Type: " + account.getAccountType());
-        System.out.println("Minimum Balance: " + formatAmount(account.getMinimumBalance()));
+        System.out.println("Balance: " + formatAmount(account.getBalance()));
     }
 
-    private static AccountType readAccountType() {
+    private AccountType readAccountType() {
         while (true) {
             int option = readNumber("Select Account Type (1. Savings  2. Current): ");
             if (option == 1) {
@@ -95,35 +112,35 @@ public class Main {
         }
     }
 
-    private static void depositMoney() {
+    private void depositMoney() {
         String accountNumber = readText("Enter Account Number: ");
         BigDecimal amount = readAmount("Enter Amount: ");
 
         Transaction transaction = bankService.deposit(accountNumber, amount);
         System.out.println("Deposit Successful!");
-        printTransaction(transaction);
+        printReceipt(transaction);
     }
 
-    private static void withdrawMoney() {
+    private void withdrawMoney() {
         String accountNumber = readText("Enter Account Number: ");
         BigDecimal amount = readAmount("Enter Amount: ");
 
         Transaction transaction = bankService.withdraw(accountNumber, amount);
         System.out.println("Withdraw Successful!");
-        printTransaction(transaction);
+        printReceipt(transaction);
     }
 
-    private static void transferMoney() {
+    private void transferMoney() {
         String fromAccount = readText("Enter Source Account: ");
         String toAccount = readText("Enter Destination Account: ");
         BigDecimal amount = readAmount("Enter Amount: ");
 
         Transaction transaction = bankService.transfer(fromAccount, toAccount, amount);
         System.out.println("Transfer Successful!");
-        printTransaction(transaction);
+        printReceipt(transaction);
     }
 
-    private static void checkBalance() {
+    private void checkBalance() {
         String accountNumber = readText("Enter Account Number: ");
 
         Account account = bankService.getAccount(accountNumber);
@@ -133,7 +150,7 @@ public class Main {
         System.out.println("Balance: " + formatAmount(account.getBalance()));
     }
 
-    private static void viewTransactionHistory() {
+    private void viewTransactionHistory() {
         String accountNumber = readText("Enter Account Number: ");
 
         List<Transaction> history = bankService.getTransactionHistory(accountNumber);
@@ -141,18 +158,10 @@ public class Main {
             System.out.println("No transactions found.");
             return;
         }
-
-        for (Transaction transaction : history) {
-            System.out.println(transaction.getTransactionId()
-                    + " | " + transaction.getType()
-                    + " | From: " + showValue(transaction.getFromAccount())
-                    + " | To: " + showValue(transaction.getToAccount())
-                    + " | " + formatAmount(transaction.getAmount())
-                    + " | " + transaction.getStatus());
-        }
+        history.forEach(System.out::println);
     }
 
-    private static void viewAllCustomers() {
+    private void viewAllCustomers() {
         List<Customer> customers = bankService.getAllCustomers();
         if (customers.isEmpty()) {
             System.out.println("No customers found.");
@@ -160,14 +169,14 @@ public class Main {
         }
 
         for (Customer customer : customers) {
-            System.out.println(customer.getCustomerId()
-                    + " | " + customer.getName()
-                    + " | " + customer.getEmail()
-                    + " | " + customer.getPhone());
+            System.out.println(customer + " | Total Balance: " + formatAmount(customer.getTotalBalance()));
+            for (Account account : customer.getAccounts()) {
+                System.out.println("    Account: " + account);
+            }
         }
     }
 
-    private static void printTransaction(Transaction transaction) {
+    private void printReceipt(Transaction transaction) {
         System.out.println("Transaction ID: " + transaction.getTransactionId());
         if (transaction.getFromAccount() != null) {
             System.out.println("From Account: " + transaction.getFromAccount());
@@ -179,12 +188,12 @@ public class Main {
         System.out.println("Status: " + transaction.getStatus());
     }
 
-    private static String readText(String message) {
+    private String readText(String message) {
         System.out.print(message);
         return scanner.nextLine().trim();
     }
 
-    private static int readNumber(String message) {
+    private int readNumber(String message) {
         while (true) {
             try {
                 return Integer.parseInt(readText(message));
@@ -194,7 +203,7 @@ public class Main {
         }
     }
 
-    private static BigDecimal readAmount(String message) {
+    private BigDecimal readAmount(String message) {
         while (true) {
             try {
                 return new BigDecimal(readText(message));
@@ -204,11 +213,7 @@ public class Main {
         }
     }
 
-    private static String formatAmount(BigDecimal amount) {
+    private String formatAmount(BigDecimal amount) {
         return String.format("INR %.2f", amount);
-    }
-
-    private static String showValue(String value) {
-        return value == null ? "-" : value;
     }
 }

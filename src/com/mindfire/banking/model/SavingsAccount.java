@@ -1,9 +1,14 @@
-package banking.model;
+package com.mindfire.banking.model;
 
+import com.mindfire.banking.enums.AccountType;
+
+import java.io.Serial;
 import java.math.BigDecimal;
 
 public class SavingsAccount extends Account {
-    private static final BigDecimal MINIMUM_BALANCE = new BigDecimal("1000");
+    @Serial
+    private static final long serialVersionUID = 1L;
+    public static final BigDecimal MINIMUM_BALANCE = new BigDecimal("1000");
 
     public SavingsAccount(String accountNumber, Customer customer) {
         super(accountNumber, customer);

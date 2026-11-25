@@ -1,9 +1,9 @@
-package banking.service;
+package com.mindfire.banking.service;
 
-import banking.model.Account;
-import banking.model.AccountType;
-import banking.model.Customer;
-import banking.model.Transaction;
+import com.mindfire.banking.enums.AccountType;
+import com.mindfire.banking.model.Account;
+import com.mindfire.banking.model.Customer;
+import com.mindfire.banking.model.Transaction;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -12,7 +12,7 @@ public interface BankService {
 
     Customer createCustomer(String name, String email, String phone);
 
-    Account createAccount(String customerId, AccountType accountType);
+    Account createAccount(String customerId, AccountType accountType, BigDecimal initialDeposit);
 
     Transaction deposit(String accountNumber, BigDecimal amount);
 

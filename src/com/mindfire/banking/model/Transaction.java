@@ -1,9 +1,17 @@
-package banking.model;
+package com.mindfire.banking.model;
 
+import com.mindfire.banking.enums.TransactionStatus;
+import com.mindfire.banking.enums.TransactionType;
+
+import java.io.Serial;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public class Transaction {
+public class Transaction implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     private final String transactionId;
     private final TransactionType type;
     private final String fromAccount;
@@ -49,5 +57,15 @@ public class Transaction {
 
     public LocalDateTime getDateTime() {
         return dateTime;
+    }
+
+    @Override
+    public String toString() {
+        return transactionId
+                + " | " + type
+                + " | From: " + (fromAccount == null ? "-" : fromAccount)
+                + " | To: " + (toAccount == null ? "-" : toAccount)
+                + " | INR " + amount.setScale(2)
+                + " | " + status;
     }
 }
